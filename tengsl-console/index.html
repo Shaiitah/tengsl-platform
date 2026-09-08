@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TENGSL — консоль мониторинга</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/svg+xml" href="/assets/tengsl-mark.svg?v=13" />
+  <link rel="stylesheet" href="styles.css?v=15" />
+</head>
+<body>
+  <div id="loginOverlay" class="login-overlay">
+    <form class="login-card" id="loginForm">
+      <div class="login-card__brand">TENGSL</div>
+      <h1>Вход в консоль</h1>
+      <label>Логин<input id="loginUsername" class="form-control" autocomplete="username" required></label>
+      <label>Пароль<input id="loginPassword" class="form-control" type="password" autocomplete="current-password" required></label>
+      <div id="loginError" class="login-error" hidden></div>
+      <button class="btn btn-primary" type="submit">Войти</button>
+    </form>
+  </div>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="sidebar__header">
+        <div class="brand">
+          <img class="brand__logo" src="/assets/tengsl-logo.svg?v=13" alt="TENGSL — monitoring platform" />
+        </div>
+        <span class="conn-indicator" id="connIndicator" data-state="connecting" title="Состояние подключения" aria-label="Состояние подключения"></span>
+      </div>
+      <div class="user-panel" id="userPanel"><span id="currentUserName">—</span><span id="currentUserRole">—</span><button class="btn btn-secondary btn-sm" onclick="logout()">Выйти</button></div>
+      
+      <nav class="sidebar__nav sidebar__nav--primary">
+        <button class="nav-btn active" data-tab="console" onclick="switchTab('console')">
+          <span class="nav-btn__icon"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10M5 5l-2 3 2 3M11 5l2 3-2 3"/></svg></span>
+          <span class="nav-btn__label">Консоль</span>
+        </button>
+      </nav>
+      
+      <div class="sidebar__section-label" id="objectsLabel">
+        <span>Объекты</span>
+        <span style="display:flex; gap:4px; align-items:center;">
+          <button class="btn-icon" onclick="exportObjects()" title="Экспорт всех объектов" aria-label="Экспорт всех объектов"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2v8M5 7l3 3 3-3M3 12v2h10v-2"/></svg></button>
+          <button class="btn-icon" onclick="document.getElementById('importObjectsFile').click()" title="Импорт объектов" aria-label="Импорт объектов"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 14V6M5 9l3-3 3 3M3 2v2h10V2"/></svg></button>
+          <button class="btn-icon" onclick="showAddObjectForm()" title="Добавить объект" aria-label="Добавить объект"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3v10M3 8h10"/></svg></button>
+        </span>
+        <input id="importObjectsFile" type="file" accept="application/json,.json" style="display:none" onchange="importObjectsFromFile(event)">
+        <input id="importObjectFile" type="file" accept="application/json,.json" style="display:none" onchange="importSingleObjectFromFile(event)">
+      </div>
+      <ul class="object-list" id="objectList" role="listbox" aria-label="Список объектов">
+        <li class="empty-state">Нет данных</li>
+      </ul>
+
+      <nav class="sidebar__nav sidebar__nav--secondary" aria-label="Дополнительные разделы">
+        <button class="nav-btn" data-tab="stats" onclick="switchTab('stats')">
+          <span class="nav-btn__icon"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 13V8M8 13V4M13 13V6"/></svg></span>
+          <span class="nav-btn__label">Статистика</span>
+        </button>
+        <button class="nav-btn" data-tab="commands" onclick="switchTab('commands')">
+          <span class="nav-btn__icon"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2h8v12H4zM6 5h4M6 8h4M6 11h3"/></svg></span>
+          <span class="nav-btn__label">Команды</span>
+        </button>
+        <button class="nav-btn" id="adminNavBtn" data-tab="administration" onclick="switchTab('administration')">
+          <span class="nav-btn__icon"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 3h12v10H2zM5 6h6M5 9h4"/></svg></span>
+          <span class="nav-btn__label">Администрирование</span>
+        </button>
+        <button class="nav-btn" data-tab="settings" onclick="switchTab('settings')">
+          <span class="nav-btn__icon"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6.2 2.8h3.6l.5 1.7 1.5.9 1.7-.4 1.1 3.4-1.5.9v1.8l1.5.9-1.1 3.4-1.7-.4-1.5.9-.5 1.7H6.2l-.5-1.7-1.5-.9-1.7.4-1.1-3.4 1.5-.9V9.3l-1.5-.9 1.1-3.4 1.7.4 1.5-.9z"/><circle cx="8" cy="8" r="2"/></svg></span>
+          <span class="nav-btn__label">Настройки</span>
+        </button>
+        <button class="nav-btn" data-tab="diagnostics" onclick="switchTab('diagnostics')">
+          <span class="nav-btn__icon"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6 2v5l-3 5a1.5 1.5 0 0 0 1.3 2h7.4A1.5 1.5 0 0 0 13 12L10 7V2M5 2h6M5 10h6"/></svg></span>
+          <span class="nav-btn__label">Диагностика</span>
+        </button>
+        <button class="nav-btn" data-tab="test-journal" onclick="switchTab('test-journal')">
+          <span class="nav-btn__icon"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 2h10v12H3zM5 5h6M5 8h6M5 11h4"/></svg></span>
+          <span class="nav-btn__label">Журнал тестирований</span>
+        </button>
+        <button class="nav-btn" id="usersNavBtn" data-tab="users" onclick="switchTab('users')">
+          <span class="nav-btn__icon"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM1.5 14a4.5 4.5 0 0 1 9 0M11 6a2 2 0 1 0 0 4M11.5 10.5a3.5 3.5 0 0 1 3 3.5"/></svg></span>
+          <span class="nav-btn__label">Пользователи</span>
+        </button>
+        <button class="nav-btn" data-tab="notifications" onclick="switchTab('notifications')">
+          <span class="nav-btn__icon"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 11h8l-1-2V6a3 3 0 0 0-6 0v3zM6.5 13h3"/></svg></span>
+          <span class="nav-btn__label">Уведомления</span>
+          <span class="nav-btn__badge" id="notificationCount" hidden>0</span>
+        </button>
+      </nav>
+    </aside>
+
+    <main class="main">
+      <!-- Вкладка: Консоль наблюдения -->
+      <div id="tab-console" class="tab-content active">
+        <div class="console-layout">
+          <section class="panel console-zones-panel">
+            <div class="panel__header">
+              <div>
+                <h2 class="panel__title">Зоны</h2>
+                <span class="panel__meta" id="zonesMeta"></span>
+              </div>
+              <button class="btn btn-primary btn-sm" id="manageZonesBtn" style="display: none;">Управление зонами</button>
+            </div>
+            <div class="zone-grid" id="zoneGrid"></div>
+            <div class="empty-state" id="zoneEmptyState">Выбери объект, чтобы увидеть зоны.</div>
+          </section>
+
+          <div class="console-side">
+            <div class="banner" id="banner" data-state="calm">
+              <div class="banner__status" id="bannerStatus">Выбери объект слева</div>
+              <div class="banner__detail" id="bannerDetail"></div>
+            </div>
+
+            <section class="panel panel--compact console-object-panel">
+              <div class="panel__header">
+                <div>
+                  <h2 class="panel__title">Состояние объекта</h2>
+                  <span class="panel__meta" id="selectedObjectMeta">Выбери объект слева</span>
+                </div>
+                <div class="selected-status" id="selectedObjectStatus">—</div>
+              </div>
+            </section>
+
+            <section class="panel panel--compact">
+              <div class="monitoring-strip" id="monitoringStrip">
+                <div class="monitor-card monitor-card--online"><span class="monitor-card__value" id="monitorOnline">—</span><span class="monitor-card__label">онлайн</span></div>
+                <div class="monitor-card monitor-card--warning"><span class="monitor-card__value" id="monitorWarning">—</span><span class="monitor-card__label">проблемы</span></div>
+                <div class="monitor-card monitor-card--offline"><span class="monitor-card__value" id="monitorOffline">—</span><span class="monitor-card__label">оффлайн</span></div>
+                <div class="monitor-card monitor-card--alarm"><span class="monitor-card__value" id="monitorAlarm">—</span><span class="monitor-card__label">активных тревог</span></div>
+                <div class="monitor-card monitor-card--time"><span class="monitor-card__value" id="monitorUpdated">—</span><span class="monitor-card__label">обновление</span></div>
+              </div>
+            </section>
+
+            <section class="panel panel--alerts">
+              <div class="panel__header">
+                <div>
+                  <h2 class="panel__title">Активные проблемы</h2>
+                  <span class="panel__meta">Тревоги, неисправности и потеря связи</span>
+                </div>
+                <span class="panel__meta" id="alertSummary">нет проблем</span>
+              </div>
+              <div class="alert-list" id="alertList"></div>
+              <div class="empty-state" id="alertEmptyState">Активных проблем нет.</div>
+            </section>
+          </div>
+        </div>
+
+        <section class="panel console-events-panel">
+          <div class="panel__header">
+            <h2 class="panel__title">Журнал событий</h2>
+            <span class="panel__meta">последние события</span>
+          </div>
+          <div class="event-log" id="eventLog"></div>
+          <div class="empty-state" id="eventEmptyState">Событий пока нет.</div>
+        </section>
+      </div>
+
+      <!-- Вкладка: Статистика -->
+      <div id="tab-stats" class="tab-content">
+        <div class="stats-header">
+          <h2 class="stats-header__title">Статистика системы</h2>
+          <button class="btn btn-secondary btn-sm" onclick="loadStats()"><svg class="btn__icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M13 6a5 5 0 0 0-9-1M3 10a5 5 0 0 0 9 1M4 3v3h3M12 13v-3H9"/></svg>Обновить</button>
+        </div>
+
+        <section class="panel">
+          <div class="panel__header"><h3 class="panel__title">Состояние сервисов</h3></div>
+          <div class="services-grid" id="servicesGrid">
+            <div class="service-card" data-status="unknown">
+              <div class="service-card__icon"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="3" y="4" width="14" height="10" rx="1"/><path d="M7 17h6M10 14v3"/></svg></div>
+              <div class="service-card__body">
+                <div class="service-card__name">Backend</div>
+                <div class="service-card__status">Загрузка…</div>
+              </div>
+            </div>
+            <div class="service-card" data-status="unknown">
+              <div class="service-card__icon"><svg viewBox="0 0 20 20" aria-hidden="true"><ellipse cx="10" cy="5" rx="6" ry="2.5"/><path d="M4 5v5c0 1.4 12 1.4 12 0V5M4 10v5c0 1.4 12 1.4 12 0v-5"/></svg></div>
+              <div class="service-card__body">
+                <div class="service-card__name">PostgreSQL</div>
+                <div class="service-card__status">Загрузка…</div>
+              </div>
+            </div>
+            <div class="service-card" data-status="unknown">
+              <div class="service-card__icon"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="3" y="5" width="14" height="10" rx="1"/><path d="m4 6 6 5 6-5"/></svg></div>
+              <div class="service-card__body">
+                <div class="service-card__name">MQTT Broker</div>
+                <div class="service-card__status">Загрузка…</div>
+              </div>
+            </div>
+            <div class="service-card" data-status="unknown">
+              <div class="service-card__icon"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 3v5M13 3v5M5 8h10v2a5 5 0 0 1-10 0zM10 15v2"/></svg></div>
+              <div class="service-card__body">
+                <div class="service-card__name">WebSocket</div>
+                <div class="service-card__status">Загрузка…</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel__header"><h3 class="panel__title">Общая статистика</h3></div>
+          <div class="stats-grid" id="statsGrid">
+            <div class="stat-card">
+              <div class="stat-card__value" id="statObjects">—</div>
+              <div class="stat-card__label">Объектов</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card__value" id="statZones">—</div>
+              <div class="stat-card__label">Зон</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card__value" id="statEvents24h">—</div>
+              <div class="stat-card__label">Событий за 24ч</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-card__value" id="statEventsTotal">—</div>
+              <div class="stat-card__label">Всего событий</div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel__header"><h3 class="panel__title">События за 24 часа</h3></div>
+          <div class="stats-grid stats-grid--compact">
+            <div class="stat-card"><div class="stat-card__value" id="statAlarm24h">—</div><div class="stat-card__label">Тревог</div></div>
+            <div class="stat-card"><div class="stat-card__value" id="statFault24h">—</div><div class="stat-card__label">Неисправностей</div></div>
+            <div class="stat-card"><div class="stat-card__value" id="statAttention24h">—</div><div class="stat-card__label">Предупреждений</div></div>
+            <div class="stat-card"><div class="stat-card__value" id="statUnknown24h">—</div><div class="stat-card__label">Нераспознанных</div></div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel__header">
+            <div>
+              <h3 class="panel__title">Мониторинг объектов</h3>
+              <span class="panel__meta">Текущее состояние связи и последняя активность агентов</span>
+            </div>
+          </div>
+          <div class="objects-overview" id="objectsOverview"></div>
+        </section>
+
+        <section class="panel">
+          <div class="panel__header"><h3 class="panel__title">Объекты</h3></div>
+          <div class="objects-table-wrapper">
+            <table class="objects-table" id="objectsTable">
+              <thead>
+                <tr>
+                  <th>Объект</th>
+                  <th>Modbus</th>
+                  <th>Зон</th>
+                  <th>Событий</th>
+                  <th>Статус агента</th>
+                  <th>Последнее событие</th>
+                </tr>
+              </thead>
+              <tbody id="objectsTableBody">
+                <tr><td colspan="6" class="empty-state">Загрузка…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+      <!-- Вкладка: Журнал команд -->
+      <div id="tab-commands" class="tab-content">
+        <div class="stats-header">
+          <div>
+            <h2 class="stats-header__title">Журнал команд</h2>
+            <div class="panel__meta">Подтверждения выполнения команд edge-агентом</div>
+          </div>
+          <button class="btn btn-secondary btn-sm" onclick="loadCommands()">🔄 Обновить</button>
+        </div>
+        <section class="panel">
+          <div class="objects-table-wrapper">
+            <table class="objects-table">
+              <thead><tr><th>Время</th><th>Объект</th><th>Зона</th><th>Команда</th><th>Статус</th><th>Детали</th><th>ID</th></tr></thead>
+              <tbody id="commandsTableBody"><tr><td colspan="7" class="empty-state">Загрузка…</td></tr></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+
+      <!-- Вкладка: Настройки кодов событий -->
+      <div id="tab-settings" class="tab-content">
+        <div class="stats-header">
+          <div>
+            <h2 class="stats-header__title">Коды событий</h2>
+            <div class="panel__meta">Расшифровка кодов С2000-ПП и пользовательские настройки отображения</div>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="showAddEventCodeForm()">+ Добавить код</button>
+        </div>
+
+        <section class="panel">
+          <div class="settings-toolbar">
+            <div>
+              <h3 class="panel__title">ntfy</h3>
+              <div class="panel__meta">Отдельный канал push-уведомлений. Клиент ntfy не встраивается в TENGSL.</div>
+            </div>
+            <button class="btn btn-secondary btn-sm" onclick="loadNotificationPreferences()">Обновить</button>
+            <button class="btn btn-primary btn-sm" onclick="testNtfyNotification()">Тест</button>
+          </div>
+          <div class="settings-toolbar" style="flex-wrap:wrap;">
+            <div><strong>Подписка:</strong> <span id="ntfySubscribeUrl">—</span></div>
+            <div class="panel__meta">Откройте URL в приложении ntfy или используйте его как topic subscription.</div>
+          </div>
+          <div class="objects-table-wrapper">
+            <table class="objects-table">
+              <thead><tr><th>Объект</th><th>Канал</th><th>Критические</th><th>Предупреждения</th><th>Информация</th><th></th></tr></thead>
+              <tbody id="notificationPreferencesBody"><tr><td colspan="6" class="empty-state">Загрузка…</td></tr></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="settings-toolbar">
+            <div>
+              <h3 class="panel__title">Моя учётная запись</h3>
+              <div class="panel__meta">Смена пароля текущего пользователя</div>
+            </div>
+          </div>
+          <form id="changePasswordForm" class="settings-toolbar" style="flex-wrap:wrap; align-items:flex-end;" onsubmit="changeMyPassword(event)">
+            <label>Текущий пароль<input id="currentPassword" class="form-control" type="password" autocomplete="current-password" required></label>
+            <label>Новый пароль<input id="newPassword" class="form-control" type="password" minlength="8" autocomplete="new-password" required></label>
+            <label>Повторите новый пароль<input id="newPasswordRepeat" class="form-control" type="password" minlength="8" autocomplete="new-password" required></label>
+            <button class="btn btn-primary btn-sm" type="submit">Изменить пароль</button>
+          </form>
+        </section>
+
+        <section class="panel">
+          <div class="settings-toolbar">
+            <input id="eventCodeFilter" class="form-control" type="search" placeholder="Поиск по коду или названию" oninput="renderEventCodes()">
+            <button class="btn btn-secondary btn-sm" onclick="loadEventCodes()">🔄 Обновить</button>
+          </div>
+          <div class="objects-table-wrapper">
+            <table class="objects-table event-codes-table">
+              <thead>
+                <tr><th>Код</th><th>Название</th><th>Тип</th><th>Приоритет</th><th>Источник</th><th>Включён</th><th></th></tr>
+              </thead>
+              <tbody id="eventCodesTableBody"><tr><td colspan="7" class="empty-state">Загрузка…</td></tr></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+
+      <!-- Вкладка: Администрирование -->
+      <div id="tab-administration" class="tab-content">
+        <div class="stats-header">
+          <div><h2 class="stats-header__title">Администрирование</h2><div class="panel__meta">Состояние сервисов и режим разработки без пересборки приложения</div></div>
+          <div>
+            <button class="btn btn-secondary btn-sm" onclick="loadAdministration()">🔄 Обновить</button>
+            <button class="btn btn-primary btn-sm" onclick="adminRestartAgent()">↻ Перезагрузить агент</button>
+            <button class="btn btn-primary btn-sm" onclick="adminRestartBackend()">↻ Перезагрузить Backend</button>
+          </div>
+        </div>
+        <section class="panel">
+          <div class="panel__header"><div><h3 class="panel__title">Состояние платформы</h3><span class="panel__meta" id="adminEnvironment">—</span></div></div>
+          <div id="adminServiceGrid" class="stats-grid stats-grid--compact"></div>
+        </section>
+        <section class="panel">
+          <div class="panel__header"><div><h3 class="panel__title">Режим работы</h3><span class="panel__meta">Переключение выполняется самим Backend через общий runtime-файл. Docker socket и управление Docker daemon из контейнеров не используются.</span></div></div>
+          <div class="admin-mode-panel">
+            <div>
+              <div class="admin-mode-current" id="adminModeCurrent">Текущий режим: —</div>
+              <div class="panel__meta" id="adminModeHint">Development включает hot reload; Production запускает сервисы без hot reload.</div>
+            </div>
+            <div class="admin-actions">
+              <button id="adminModeDev" class="btn btn-secondary" onclick="adminSetMode('development')">Development · hot reload</button>
+              <button id="adminModeProd" class="btn btn-primary" onclick="adminSetMode('production')">Production · стабильный запуск</button>
+            </div>
+          </div>
+        </section>
+        <section class="panel">
+          <div class="panel__header"><div><h3 class="panel__title">Разработка без rebuild</h3><span class="panel__meta">Исходники монтируются в контейнеры в development-режиме</span></div></div>
+          <div class="admin-code-grid">
+            <div><b>Запуск</b><pre>docker compose up -d</pre></div>
+            <div><b>Тесты</b><pre>docker compose run --rm backend pytest -q</pre></div>
+            <div><b>Миграции БД</b><pre>docker compose run --rm backend alembic upgrade head</pre></div>
+            <div><b>Остановка</b><pre>docker compose down</pre></div>
+          </div>
+          <div class="panel__meta" style="margin-top:14px">Оба режима используют один <code>docker-compose.yml</code>. Runtime-режим хранится в <code>runtime/mode</code>; для переключения из Dashboard пересборка не нужна. PostgreSQL хранит данные в <code>data/postgres</code>.</div>
+        </section>
+        <section class="panel">
+          <div class="panel__header"><h3 class="panel__title">Что требует пересборки</h3></div>
+          <ul class="admin-list">
+            <li>Изменение <code>Dockerfile</code> или системных пакетов.</li>
+            <li>Изменение Python-зависимостей в <code>requirements.txt</code>.</li>
+            <li>Изменение базового образа или production-конфигурации, запекаемой в image.</li>
+            <li>Обычные изменения Python/JS/CSS при смонтированных исходниках пересборки не требуют.</li>
+          </ul>
+        </section>
+      </div>
+
+      <!-- Вкладка: Пользователи -->
+      <div id="tab-users" class="tab-content">
+        <div class="stats-header">
+          <div><h2 class="stats-header__title">Пользователи</h2><div class="panel__meta">Роли и доступ к объектам</div></div>
+          <div><button class="btn btn-secondary btn-sm" onclick="exportUsers()">Экспорт</button> <button class="btn btn-secondary btn-sm" onclick="document.getElementById('importUsersFile').click()">Импорт</button> <button class="btn btn-primary btn-sm" onclick="showUserForm()">+ Добавить</button></div>
+          <input id="importUsersFile" type="file" accept="application/json,.json" style="display:none" onchange="importUsersFromFile(event)">
+        </div>
+        <section class="panel"><div class="objects-table-wrapper"><table class="objects-table"><thead><tr><th>Логин</th><th>Имя</th><th>Роль</th><th>Объекты</th><th>Статус</th><th></th></tr></thead><tbody id="usersTableBody"></tbody></table></div></section>
+      </div>
+
+      <!-- Вкладка: Центр уведомлений -->
+      <div id="tab-notifications" class="tab-content">
+        <div class="stats-header">
+          <div>
+            <h2 class="stats-header__title">Уведомления</h2>
+            <div class="panel__meta">История всплывающих сообщений и проблем для последующего разбора</div>
+          </div>
+          <div class="notification-actions">
+            <button class="btn btn-secondary btn-sm" onclick="markAllNotificationsRead()">Отметить прочитанными</button>
+            <button class="btn btn-secondary btn-sm" onclick="clearNotifications()">Очистить историю</button>
+          </div>
+        </div>
+        <section class="panel">
+          <div class="notification-center-toolbar">
+            <span class="panel__meta" id="notificationSummary">Нет уведомлений</span>
+          </div>
+          <div class="notification-center-list" id="notificationCenterList"></div>
+          <div class="empty-state" id="notificationCenterEmpty">Уведомлений пока нет.</div>
+        </section>
+      </div>
+
+      <!-- Вкладка: Диагностика / тесты -->
+      <div id="tab-diagnostics" class="tab-content">
+        <div class="stats-header">
+          <div>
+            <h2 class="stats-header__title">Диагностика</h2>
+            <div class="panel__meta">Последний зафиксированный результат автотестов проекта</div>
+          </div>
+          <div>
+            <button class="btn btn-primary btn-sm" onclick="runDiagnostics()">▶ Запустить диагностику</button>
+            <button class="btn btn-secondary btn-sm" onclick="loadTestResults()">🔄 Обновить</button>
+            <button class="btn btn-secondary btn-sm" onclick="exportLatestTestRun()">⬇ Скачать TXT</button>
+          </div>
+        </div>
+        <section class="panel">
+          <div id="testSummary" class="stats-grid stats-grid--compact">
+            <div class="stat-card"><div class="stat-card__value" id="testOverall">—</div><div class="stat-card__label">Результат</div></div>
+            <div class="stat-card"><div class="stat-card__value" id="testPassed">—</div><div class="stat-card__label">Пройдено</div></div>
+            <div class="stat-card"><div class="stat-card__value" id="testFailed">—</div><div class="stat-card__label">Ошибок</div></div>
+            <div class="stat-card"><div class="stat-card__value" id="testSkipped">—</div><div class="stat-card__label">Пропущено</div></div>
+          </div>
+          <div class="panel__meta" id="testGeneratedAt" style="margin-top:10px"></div>
+        </section>
+        <section class="panel">
+          <div class="panel__header"><h3 class="panel__title">Наборы тестов</h3></div>
+          <div class="objects-table-wrapper">
+            <table class="objects-table">
+              <thead><tr><th>Набор</th><th>Статус</th><th>Пройдено</th><th>Ошибок</th><th>Пропущено</th><th>Время</th></tr></thead>
+              <tbody id="testSuitesBody"><tr><td colspan="6" class="empty-state">Загрузка…</td></tr></tbody>
+            </table>
+          </div>
+          <div id="testFailures" style="margin-top:16px"></div>
+        </section>
+      </div>
+
+      <!-- Вкладка: Журнал тестирований -->
+      <div id="tab-test-journal" class="tab-content">
+        <div class="stats-header">
+          <div>
+            <h2 class="stats-header__title">Журнал тестирований</h2>
+            <div class="panel__meta">История запусков диагностики, сохранённая в PostgreSQL</div>
+          </div>
+          <button class="btn btn-secondary btn-sm" onclick="loadTestJournal()">🔄 Обновить</button>
+        </div>
+        <section class="panel">
+          <div class="objects-table-wrapper">
+            <table class="objects-table">
+              <thead><tr><th>Дата</th><th>Результат</th><th>Всего</th><th>OK</th><th>Ошибок</th><th>Пропущено</th><th>Время</th><th>Кто запустил</th><th>Файл</th></tr></thead>
+              <tbody id="testJournalBody"><tr><td colspan="9" class="empty-state">Загрузка…</td></tr></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <script src="config.js?v=15"></script>
+  <script src="app.js?v=15"></script>
+</body>
+</html>

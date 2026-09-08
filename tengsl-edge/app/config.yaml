@@ -1,0 +1,82 @@
+# Конфигурация мульти-объектного edge-агента
+# object_id, modbus-настройки и зоны берутся из backend'а
+
+polling:
+  interval_seconds: 1.0
+  zones_poll_interval_seconds: 30.0
+  objects_poll_interval_seconds: 60.0
+
+mqtt:
+  host: "mqtt-broker"
+  port: 1883
+  use_tls: false
+  username: ""
+  password: ""
+  topic_prefix: "tengsl"
+  client_id: "edge-agent-multi"
+  qos: 1
+
+# URL backend API — источник правды для объектов и зон
+backend_url: "http://backend:8000"
+
+# Базовые настройки Modbus (host/port/unit_id переопределяются из backend'а
+# для каждого объекта отдельно)
+modbus:
+  mode: "tcp"
+  timeout_seconds: 3
+  reconnect_delay_seconds: 5
+
+# Расшифровка кодов состояния/события (общая для всех объектов)
+status_codes:
+  # --- Пожар / тревога (event_type: alarm) ---
+  37:  { event_type: "alarm", label: "Пожар" }
+  40:  { event_type: "alarm", label: "Пожар 2" }
+  3:   { event_type: "alarm", label: "Тревога проникновения" }
+  79:  { event_type: "alarm", label: "Тревога затопления" }
+  118: { event_type: "alarm", label: "Тревога входа" }
+  58:  { event_type: "alarm", label: "Тихая тревога" }
+
+  # --- Предупреждение (event_type: attention) ---
+  44: { event_type: "attention", label: "Внимание" }
+  43: { event_type: "attention", label: "Предупреждение" }
+  4:  { event_type: "attention", label: "Помеха" }
+
+  # --- Неисправности (event_type: fault) ---
+  41:  { event_type: "fault", label: "Неисправность оборудования" }
+  45:  { event_type: "fault", label: "Обрыв входа" }
+  214: { event_type: "fault", label: "КЗ входа" }
+  46:  { event_type: "fault", label: "Обрыв ДПЛС" }
+  215: { event_type: "fault", label: "КЗ ДПЛС" }
+  222: { event_type: "fault", label: "Повышенное напряжение ДПЛС" }
+  82:  { event_type: "fault", label: "Неисправность термометра" }
+  165: { event_type: "fault", label: "Ошибка параметров входа" }
+  187: { event_type: "fault", label: "Потеря связи со входом" }
+  189: { event_type: "fault", label: "Потеря связи по ДПЛС1" }
+  190: { event_type: "fault", label: "Потеря связи по ДПЛС2" }
+  224: { event_type: "fault", label: "Некорректный ответ устройства" }
+  225: { event_type: "fault", label: "Неустойчивый ответ устройства" }
+  204: { event_type: "fault", label: "Требуется обслуживание" }
+  250: { event_type: "fault", label: "Потеряна связь с прибором" }
+  217: { event_type: "fault", label: "Потеря связи по ветви RS-485" }
+
+  # --- Норма (event_type: normal) ---
+  24:  { event_type: "normal", label: "Взят под контроль" }
+  111: { event_type: "normal", label: "Включен контроль ШС" }
+  158: { event_type: "normal", label: "Восстановление внутренней зоны" }
+  188: { event_type: "normal", label: "Восстановление связи со входом" }
+  191: { event_type: "normal", label: "Восстановление связи по ДПЛС1" }
+  201: { event_type: "normal", label: "Восстановление связи по ДПЛС2" }
+  47:  { event_type: "normal", label: "Восстановление ДПЛС" }
+  251: { event_type: "normal", label: "Восстановлена связь с прибором" }
+  78:  { event_type: "normal", label: "Температура в норме" }
+
+  # --- Снято с охраны (event_type: disabled) ---
+  109: { event_type: "disabled", label: "Снят с охраны" }
+  112: { event_type: "disabled", label: "Отключен контроль ШС" }
+
+  # --- Тест ---
+  19: { event_type: "unknown", label: "Тест" }
+  20: { event_type: "unknown", label: "Режим тестирования" }
+
+  0: { event_type: "unknown", label: "Нет данных" }
+  default: { event_type: "unknown", label: "Код не распознан" }

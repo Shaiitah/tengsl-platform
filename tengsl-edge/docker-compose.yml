@@ -1,0 +1,19 @@
+# Пример для локальной проверки. Для боевого пилота брокер MQTT
+# и backend обычно живут отдельно (см. предыдущее обсуждение архитектуры) -
+# здесь только сам edge-агент + тестовый брокер без TLS.
+
+services:
+  mqtt-broker:
+    image: eclipse-mosquitto:2
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+
+  edge-agent:
+    build: .
+    depends_on:
+      - mqtt-broker
+    volumes:
+      - ./config.yaml:/app/config.yaml:ro
+    restart: unless-stopped

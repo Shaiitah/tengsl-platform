@@ -1,0 +1,14 @@
+# TENGSL-managed ntfy instance. Web UI remains available on host port 8082.
+base-url: https://ntfy.morianas.ru
+listen-http: 0.0.0.0:80
+cache-file: /var/cache/ntfy/cache.db
+auth-file: /var/cache/ntfy/auth.db
+auth-default-access: "deny-all"
+auth-users:
+  - "tengsl-publisher:$2a$10$/ehiQt.w7lhTmHXq.RNsOOkIwiPPeWFIzWYO3DRxNixnWKLX8.uj.:user"
+auth-access:
+  - "tengsl-publisher:tengsl-user-*:wo"
+  - "*:tengsl-user-*:ro"
+auth-tokens:
+  - "tengsl-publisher:tk_tengslpublisher00000000000000:TENGSL backend"
+behind-proxy: true

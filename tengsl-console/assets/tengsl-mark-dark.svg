@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-label="TENGSL mark">
+  <defs><linearGradient id="g" x1="12" y1="18" x2="76" y2="78" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#5DD3FF"/><stop offset="1" stop-color="#818CF8"/></linearGradient></defs>
+  <g fill="none" stroke="url(#g)" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"><path d="M18 25H72"/><path d="M45 25V68"/></g>
+  <circle cx="18" cy="25" r="10" fill="#60A5FA"/><circle cx="72" cy="25" r="10" fill="#67E8F9"/><circle cx="45" cy="68" r="11" fill="#818CF8"/>
+</svg>

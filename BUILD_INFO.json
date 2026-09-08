@@ -1,0 +1,8 @@
+{
+  "project": "TENGSL",
+  "version": "1.0.0",
+  "release_source": "Git tag",
+  "generated_by": "GitHub Actions",
+  "source_of_truth": "Git repository",
+  "note": "This manifest is release metadata; application source is unchanged."
+}

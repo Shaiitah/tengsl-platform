@@ -1,0 +1,5 @@
+pymodbus[serial]==3.7.4
+aiomqtt==2.3.0
+PyYAML==6.0.2
+httpx>=0.27.0
+watchfiles==1.1.0

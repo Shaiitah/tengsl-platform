@@ -1,0 +1,31 @@
+# Мульти-объектная конфигурация edge-агента
+
+polling:
+  interval_seconds: 1.0
+  zones_poll_interval_seconds: 30.0
+  objects_poll_interval_seconds: 60.0
+
+mqtt:
+  host: "mqtt-broker"
+  port: 1883
+  use_tls: false
+  username: ""
+  password: ""
+  topic_prefix: "tengsl"
+  client_id: "edge-agent-multi"
+  qos: 1
+
+backend_url: "http://backend:8000"
+
+modbus:
+  mode: "tcp"
+  timeout_seconds: 3
+  reconnect_delay_seconds: 5
+
+status_codes:
+  37:  { event_type: "alarm", label: "Пожар" }
+  40:  { event_type: "alarm", label: "Пожар 2" }
+  3:   { event_type: "alarm", label: "Тревога проникновения" }
+  24:  { event_type: "normal", label: "Взят под контроль" }
+  187: { event_type: "fault", label: "Потеря связи со входом" }
+  default: { event_type: "unknown", label: "Код не распознан" }

@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 96" role="img" aria-labelledby="title desc">
+  <title id="title">TENGSL</title>
+  <desc id="desc">TENGSL connected equipment monitoring platform</desc>
+  <defs>
+    <linearGradient id="g" x1="12" y1="18" x2="82" y2="78" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#39B8F6"/>
+      <stop offset="1" stop-color="#6366F1"/>
+    </linearGradient>
+  </defs>
+  <g transform="translate(4,4)">
+    <g fill="none" stroke="url(#g)" stroke-width="9" stroke-linecap="round">
+      <path d="M18 25H72"/>
+      <path d="M45 25V68"/>
+    </g>
+    <circle cx="18" cy="25" r="10" fill="#3B82F6"/>
+    <circle cx="72" cy="25" r="10" fill="#39B8F6"/>
+    <circle cx="45" cy="68" r="11" fill="#6366F1"/>
+  </g>
+  <text x="104" y="62" font-family="Arial, Helvetica, sans-serif" font-size="54" font-weight="700" letter-spacing="8" fill="#E7ECEF">TENGSL</text>
+</svg>

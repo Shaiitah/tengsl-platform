@@ -1,0 +1,130 @@
+# Пример конфигурации edge-агента для одного объекта.
+# Скопируй в config.yaml и заполни под свой объект.
+
+object_id: "obj-001"
+
+modbus:
+  # Если используешь RS-485 -> Ethernet конвертер (Moxa, С2000-Ethernet и т.п.)
+  # в режиме Modbus RTU over TCP:
+  mode: "tcp"           # "tcp" или "serial"
+  host: "192.168.1.50"
+  port: 502
+  unit_id: 1             # Modbus slave id прибора С2000-ПП
+  timeout_seconds: 3
+  reconnect_delay_seconds: 5
+
+  # Если подключаешься напрямую по последовательному порту, используй:
+  # mode: "serial"
+  # serial_port: "/dev/ttyUSB0"
+  # baudrate: 9600
+  # parity: "N"
+
+polling:
+  interval_seconds: 1.0
+
+mqtt:
+  host: "mqtt-broker"
+  port: 8883
+  use_tls: true
+  username: ""
+  password: ""
+  topic_prefix: "tengsl"
+  client_id: "edge-agent-obj-001"
+  qos: 1
+
+# Карта зон/шлейфов. Формула адреса регистра — из РЭ «С2000-ПП»
+# (АЦДР.426469.020 РЭп, Изм.17 от 21.08.2025), п. «Функции запроса
+# и установки состояния»: адрес = 40000 + (№ зоны Modbus - 1).
+#
+# Номер зоны здесь — это № ЗОНЫ MODBUS (порядковый номер в таблице зон
+# «С2000-ПП», настраивается в UPROG), а НЕ номер ШС/адрес устройства
+# на линии С2000-КДЛ. Сопоставление "какая зона Modbus — какой физический
+# извещатель" смотри в UPROG на странице «Устройства» → «Таблица зон».
+zones:
+  - address: 40000   # = 40000 + (1-1)
+    register_type: "holding"
+    zone_number: 1
+    name: "Извещатель у входа"
+    device_type: "С2000-ДИП34А"
+
+  - address: 40001   # = 40000 + (2-1)
+    register_type: "holding"
+    zone_number: 2
+    name: "Извещатель коридор"
+    device_type: "С2000-ДИП34А"
+
+  - address: 40002   # = 40000 + (3-1)
+    register_type: "holding"
+    zone_number: 3
+    name: "Состояние контроллера С2000-КДЛ"
+    device_type: "С2000-КДЛ"
+    # Зона типа 3 (состояние прибора) в UPROG: № ШС = 0.
+    # Сюда попадают события уровня самого контроллера
+    # (обрыв/КЗ ДПЛС, потеря связи по ветви и т.д.), а не конкретного
+    # извещателя на линии.
+
+# Расшифровка кодов состояния/события. Источник — таблица 1.1.5.12.1
+# «Список событий (состояний ШС) системы Орион» из РЭ «С2000-ПП»
+# (АЦДР.426469.020 РЭп, Изм.17 от 21.08.2025). Ключ — код события/состояния,
+# который приходит в старшем (приоритетном) байте регистра состояния зоны.
+#
+# event_type здесь — категория для дашборда (normal/alarm/attention/fault/
+# disabled/unknown), она НЕ из документации Bolid — это наша собственная
+# классификация кодов по важности для UI. label — короткое название
+# события из таблицы (не полное описание, только название для интерфейса).
+status_codes:
+  # --- Пожар / тревога (event_type: alarm) ---
+  37:  { event_type: "alarm", label: "Пожар" }
+  40:  { event_type: "alarm", label: "Пожар 2" }
+  3:   { event_type: "alarm", label: "Тревога проникновения" }
+  79:  { event_type: "alarm", label: "Тревога затопления" }
+  118: { event_type: "alarm", label: "Тревога входа" }
+  58:  { event_type: "alarm", label: "Тихая тревога" }
+
+  # --- Предупреждение (event_type: attention — предпожарное состояние) ---
+  44: { event_type: "attention", label: "Внимание" }
+  43: { event_type: "attention", label: "Предупреждение" }
+  4:  { event_type: "attention", label: "Помеха" }
+
+  # --- Неисправности (event_type: fault) ---
+  41:  { event_type: "fault", label: "Неисправность оборудования" }
+  45:  { event_type: "fault", label: "Обрыв входа" }
+  214: { event_type: "fault", label: "КЗ входа" }
+  46:  { event_type: "fault", label: "Обрыв ДПЛС" }
+  215: { event_type: "fault", label: "КЗ ДПЛС" }
+  222: { event_type: "fault", label: "Повышенное напряжение ДПЛС" }
+  82:  { event_type: "fault", label: "Неисправность термометра" }
+  165: { event_type: "fault", label: "Ошибка параметров входа" }
+  187: { event_type: "fault", label: "Потеря связи со входом" }
+  189: { event_type: "fault", label: "Потеря связи по ДПЛС1" }
+  190: { event_type: "fault", label: "Потеря связи по ДПЛС2" }
+  224: { event_type: "fault", label: "Некорректный ответ устройства" }
+  225: { event_type: "fault", label: "Неустойчивый ответ устройства" }
+  204: { event_type: "fault", label: "Требуется обслуживание" }
+  250: { event_type: "fault", label: "Потеряна связь с прибором" }
+  217: { event_type: "fault", label: "Потеря связи по ветви RS-485" }
+
+  # --- Норма / взято под охрану (event_type: normal) ---
+  24:  { event_type: "normal", label: "Взят под контроль" }
+  111: { event_type: "normal", label: "Включен контроль ШС" }
+  158: { event_type: "normal", label: "Восстановление внутренней зоны" }
+  188: { event_type: "normal", label: "Восстановление связи со входом" }
+  191: { event_type: "normal", label: "Восстановление связи по ДПЛС1" }
+  201: { event_type: "normal", label: "Восстановление связи по ДПЛС2" }
+  47:  { event_type: "normal", label: "Восстановление ДПЛС" }
+  251: { event_type: "normal", label: "Восстановлена связь с прибором" }
+  78:  { event_type: "normal", label: "Температура в норме" }
+
+  # --- Снято с охраны / отключено (event_type: disabled) ---
+  109: { event_type: "disabled", label: "Снят с охраны" }
+  112: { event_type: "disabled", label: "Отключен контроль ШС" }
+
+  # --- Тест (event_type: unknown, отдельная метка) ---
+  19: { event_type: "unknown", label: "Тест" }
+  20: { event_type: "unknown", label: "Режим тестирования" }
+
+  # Код 0 = нет активного состояния (регистр ещё не опрашивался
+  # или для зоны нет истории событий)
+  0: { event_type: "unknown", label: "Нет данных" }
+
+  default: { event_type: "unknown", label: "Код не распознан" }

@@ -1,0 +1,11 @@
+__pycache__/
+*.py[cod]
+.venv/
+.env
+
+# Local Postgres data
+data/postgres/
+data/ntfy/
+runtime/diagnostics.json
+
+runtime/diagnostics/

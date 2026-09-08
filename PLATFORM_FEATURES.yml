@@ -1,0 +1,21 @@
+version: 1.0.0
+# Release contract: CI verifies that these capabilities remain present.
+features:
+  authentication: true
+  rbac: true
+  mqtt: true
+  websocket: true
+  modbus: true
+  notifications_ntfy: true
+  database:
+    backup: true
+    restore: true
+    merge: true
+  diagnostics:
+    runtime_health: true
+    pytest: true
+  agent:
+    api_auth: true
+    remote_config: true
+  migrations:
+    alembic: true

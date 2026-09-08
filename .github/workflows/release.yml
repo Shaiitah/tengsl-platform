@@ -1,0 +1,47 @@
+name: TENGSL Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout tag
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install validation dependencies
+        run: python -m pip install --upgrade pyyaml
+
+      - name: Verify release contract
+        run: python scripts/release_check.py
+
+      - name: Verify version matches tag
+        run: |
+          test "v$(cat VERSION)" = "${GITHUB_REF_NAME}"
+
+      - name: Build release archive
+        run: |
+          mkdir -p dist
+          git archive --format=zip --prefix=tengsl/ -o "dist/tengsl-${GITHUB_REF_NAME}.zip" "${GITHUB_REF_NAME}"
+          sha256sum "dist/tengsl-${GITHUB_REF_NAME}.zip" > "dist/tengsl-${GITHUB_REF_NAME}.zip.sha256"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            dist/tengsl-${GITHUB_REF_NAME}.zip
+            dist/tengsl-${GITHUB_REF_NAME}.zip.sha256
