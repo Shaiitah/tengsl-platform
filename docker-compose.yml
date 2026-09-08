@@ -1,15 +1,11 @@
-# Единый compose-файл TENGSL для Synology Container Manager.
-# Режим runtime переключается из Dashboard через общий runtime-файл;
-# Docker socket контейнерам НЕ предоставляется.
 services:
   mqtt-broker:
     image: eclipse-mosquitto:2
     ports:
-      - "1883:1883"
+    - 1883:1883
     volumes:
-      - ./mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+    - ./mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
     restart: unless-stopped
-
   postgres:
     image: postgres:16
     environment:
@@ -17,15 +13,16 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-tengsl}
       POSTGRES_DB: ${POSTGRES_DB:-tengsl}
     volumes:
-      - ./data/postgres:/var/lib/postgresql/data
+    - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-tengsl} -d ${POSTGRES_DB:-tengsl}"]
+      test:
+      - CMD-SHELL
+      - pg_isready -U ${POSTGRES_USER:-tengsl} -d ${POSTGRES_DB:-tengsl}
       interval: 5s
       timeout: 5s
       retries: 12
       start_period: 10s
     restart: unless-stopped
-
   ntfy:
     image: binwiederhier/ntfy:latest
     command: serve
@@ -33,17 +30,17 @@ services:
       NTFY_BASE_URL: ${NTFY_BASE_URL:-https://ntfy.morianas.ru}
       NTFY_AUTH_FILE: /var/lib/ntfy/auth.db
       NTFY_AUTH_DEFAULT_ACCESS: deny-all
-      NTFY_AUTH_USERS: 'tengsl-publisher:$$2a$$10$$/ehiQt.w7lhTmHXq.RNsOOkIwiPPeWFIzWYO3DRxNixnWKLX8.uj.:user'
-      NTFY_AUTH_ACCESS: 'tengsl-publisher:tengsl-user-*:wo,*:tengsl-user-*:ro'
-      NTFY_AUTH_TOKENS: 'tengsl-publisher:${NTFY_PUBLISHER_TOKEN:-tk_tengslpublisher00000000000000}:TENGSL backend'
+      NTFY_AUTH_USERS: tengsl-publisher:$$2a$$10$$/ehiQt.w7lhTmHXq.RNsOOkIwiPPeWFIzWYO3DRxNixnWKLX8.uj.:user
+      NTFY_AUTH_ACCESS: tengsl-publisher:tengsl-user-*:wo,*:tengsl-user-*:ro
+      NTFY_AUTH_TOKENS: tengsl-publisher:${NTFY_PUBLISHER_TOKEN:-tk_tengslpublisher00000000000000}:TENGSL
+        backend
       NTFY_BEHIND_PROXY: 'true'
       NTFY_ENABLE_LOGIN: 'true'
     volumes:
-      - ./data/ntfy:/var/lib/ntfy
+    - ./data/ntfy:/var/lib/ntfy
     ports:
-      - "8082:80"
+    - 8082:80
     restart: unless-stopped
-
   backend:
     build: ./tengsl-core
     env_file: .env
@@ -51,9 +48,9 @@ services:
       ORION_AGENT_API_TOKEN: ${TENGSL_AGENT_API_TOKEN:-}
       TENGSL_MODE_FILE: /runtime/mode
     volumes:
-      - ./tengsl-core/app:/app/app:ro
-      - ./tengsl-core/tests:/app/tests:ro
-      - ./runtime:/runtime
+    - ./tengsl-core/app:/app/app:ro
+    - ./tengsl-core/tests:/app/tests:ro
+    - ./runtime:/runtime
     depends_on:
       postgres:
         condition: service_healthy
@@ -62,29 +59,29 @@ services:
       ntfy:
         condition: service_started
     ports:
-      - "8000:8000"
+    - 8000:8000
     restart: unless-stopped
-
   edge-agent:
     build: ./tengsl-edge
     environment:
       TENGSL_AGENT_API_TOKEN: ${TENGSL_AGENT_API_TOKEN:-}
       TENGSL_MODE_FILE: /runtime/mode
     volumes:
-      - ./tengsl-edge/app:/app/app:ro
-      - ./edge-agent-config.yaml:/app/config.yaml:ro
-      - ./runtime:/runtime
+    - ./tengsl-edge/app:/app/app:ro
+    - ./edge-agent-config.yaml:/app/config.yaml:ro
+    - ./runtime:/runtime
     depends_on:
-      - mqtt-broker
-      - backend
+    - mqtt-broker
+    - backend
     restart: unless-stopped
-
   dashboard:
     build: ./tengsl-console
     volumes:
-      - ./tengsl-console:/usr/share/nginx/html:ro
+    - ./tengsl-console:/usr/share/nginx/html:ro
     ports:
-      - "8080:80"
+    - 8080:80
     depends_on:
-      - backend
+    - backend
     restart: unless-stopped
+volumes:
+  postgres_data: {}
